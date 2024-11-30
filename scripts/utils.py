@@ -2,12 +2,29 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException, NoSuchElementException
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import ChromeType
 from bs4 import BeautifulSoup
 import time
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException, NoSuchElementException
 
-def scrape_urls(base_url):
-    driver = webdriver.Chrome()
+def get_driver(options):
+    return webdriver.Chrome(
+        service=Service(
+            ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()
+        ),
+        options=options,
+    )
+
+def scrape_urls(base_url, is_streamlit=False):
+    if is_streamlit:
+        options = Options()
+        options.add_argument("--disable-gpu")
+        options.add_argument("--headless")
+        driver = get_driver(options=options)
+    else:
+        driver = webdriver.Chrome()
     driver.get(base_url)
     all_links = []
     current_page = 1
