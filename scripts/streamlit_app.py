@@ -1,5 +1,6 @@
 import streamlit as st
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext, Settings
+from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.embeddings.gemini import GeminiEmbedding
 from llama_index.vector_stores.neo4jvector import Neo4jVectorStore
 from llama_index.llms.gemini import Gemini
@@ -7,6 +8,7 @@ from streamlit_cookies_controller import CookieController
 import os
 import utils  # Importing the utilities script for link processing
 import tempfile
+import requests
 
 # Initialize Cookie Controller
 controller = CookieController()
@@ -66,7 +68,7 @@ with st.sidebar:
 # Step 2: Input Document Links
 st.header("Upload and Process Documents")
 uploaded_links = st.text_area("Enter URLs (one per line):")
-download_dir = tempfile.mkdtemp()
+download_dir = tempfile.TemporaryDirectory().name
 
 if st.button("Process Links"):
     if not api_key:
@@ -77,15 +79,33 @@ if st.button("Process Links"):
             pdf_links = []
             for link in links:
                 try:
-                    extracted_links = utils.scrape_urls(link)
+                    extracted_links, debug = utils.scrape_urls(link, is_streamlit=False)
+                    # st.write('\n'.join(debug))
                     pdf_links.extend(extracted_links)
                 except Exception as e:
                     st.error(f"Error processing {link}: {e}")
             
-            for pdf_url in pdf_links:
+            # Initialize progress bar
+            overall_progress = st.progress(0)
+            total_pdfs = len(pdf_links)
+
+            for index, pdf_url in enumerate(pdf_links):
                 pdf_name = os.path.basename(pdf_url)
                 pdf_path = os.path.join(download_dir, pdf_name)
-                os.system(f"wget -q {pdf_url} -O {pdf_path}")
+                try:
+                    # Download the PDF using requests
+                    response = requests.get(pdf_url, stream=True)
+                    response.raise_for_status()  # Raise an error for HTTP issues
+                    with open(pdf_path, "wb") as pdf_file:
+                        for chunk in response.iter_content(chunk_size=1024):
+                            if chunk:  # Filter out keep-alive chunks
+                                pdf_file.write(chunk)
+                    st.write(f"Downloaded {pdf_name} at {pdf_path}!")
+                except requests.exceptions.RequestException as e:
+                    st.error(f"Error downloading {pdf_url}: {e}")
+                
+                # Update overall progress bar
+                overall_progress.progress((index + 1) / total_pdfs)
             
             st.success(f"Downloaded {len(pdf_links)} PDFs!")
 
@@ -99,10 +119,10 @@ if st.button("Index Documents"):
             Settings.embed_model = GeminiEmbedding(api_key=api_key, model_name="models/text-embedding-004")
             Settings.llm = Gemini(api_key=api_key, model="models/gemini-1.5-flash")
             neo4j_vector = Neo4jVectorStore(
-                username=neo4j_username,
-                password=neo4j_password,
-                url=neo4j_url,
-                embed_dim=embed_dim,
+                neo4j_username,
+                neo4j_password,
+                neo4j_url,
+                embed_dim,
                 hybrid_search=True
             )
 
