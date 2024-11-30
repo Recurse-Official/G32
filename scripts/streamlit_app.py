@@ -76,7 +76,8 @@ if not os.path.exists(new_dir):
 # Step 3: Input Document Links
 st.header("Upload and Process Documents")
 uploaded_links = st.text_area("Enter URLs (one per line):")
-
+if "extracted_data" not in st.session_state:
+    st.session_state.extracted_data = {}
 if st.button("Process Links"):
     if not api_key:
         st.error("Please provide your API Key in the sidebar!")
@@ -86,8 +87,8 @@ if st.button("Process Links"):
             pdf_links = []
             for link in links:
                 try:
-                    extracted_links = utils.scrape_urls(link, is_streamlit=False)
-                    pdf_links.extend(extracted_links)
+                    st.session_state.extracted_data.update(utils.scrape_urls(link))
+                    pdf_links.extend([row['attachment'] for row in st.session_state.extracted_data.values()])
                 except Exception as e:
                     st.error(f"Error processing {link}: {e}")
             
@@ -132,8 +133,11 @@ if st.button("Index Documents"):
                     hybrid_search=True
                 )
 
+                def get_metadata(file_path):
+                    return st.session_state.extracted_data.get(os.path.basename(file_path), {})
                 # Load documents from the 'new' directory (where PDFs were downloaded)
-                documents = SimpleDirectoryReader(new_dir).load_data()
+                
+                documents = SimpleDirectoryReader(input_dir=new_dir,file_metadata=get_metadata).load_data()
                 storage_context = StorageContext.from_defaults(vector_store=neo4j_vector)
                 index = VectorStoreIndex.from_documents(documents, storage_context=storage_context, show_progress=True)
                 st.success("Documents indexed successfully!")
