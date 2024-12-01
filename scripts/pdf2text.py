@@ -25,11 +25,15 @@ def extract_text_and_images_with_ocr(pdf_path):
 
         # Extract images and apply OCR
         image_texts = []
+        angle=fitz_page.rotation
         for img_index, img in enumerate(fitz_page.get_images(full=True)):
             xref = img[0]
             base_image = pdf_doc.extract_image(xref)
             image_bytes = base_image["image"]
             image = Image.open(io.BytesIO(image_bytes))
+            image = image.rotate(-angle, Image.NEAREST, expand = 1)
+            if angle!=0: print(f'Page was rotated by {angle}°. [FIXED]')
+            # image.show()
             
             # Apply OCR on the image
             ocr_text = pytesseract.image_to_string(image)
@@ -42,16 +46,15 @@ def extract_text_and_images_with_ocr(pdf_path):
     # Combine all pages
     return "\n\n".join(combined_content)
 
-'''
+
 # Example usage
 import io
 
-pdf_path = "D:/Srikar/Desktop/NCSTC Booklet.pdf"
+pdf_path = "D:/Srikar/Desktop/Policy_Circular.pdf"
 result = extract_text_and_images_with_ocr(pdf_path)
 
 # Save to a file or print
-with open("D:/Srikar/Desktop/NCSTC Booklet.txt", "w", encoding="utf-8") as f:
+with open("D:/Srikar/Desktop/Policy_Circular.txt", "w", encoding="utf-8") as f:
     f.write(result)
 
 print("Mixed-content extraction complete!")
-'''
