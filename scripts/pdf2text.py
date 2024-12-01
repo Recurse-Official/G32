@@ -61,8 +61,6 @@ with open("", "w", encoding="utf-8") as f:
     f.write(result)
 
 print("Mixed-content extraction complete!")
-'''
-
 
 class MyFileReader(BaseReader):
     def load_data(self, file, extra_info=None):
