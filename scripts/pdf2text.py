@@ -50,11 +50,11 @@ def extract_text_and_images_with_ocr(pdf_path):
 # Example usage
 import io
 
-pdf_path = "D:/Srikar/Desktop/Policy_Circular.pdf"
+pdf_path = ""
 result = extract_text_and_images_with_ocr(pdf_path)
 
 # Save to a file or print
-with open("D:/Srikar/Desktop/Policy_Circular.txt", "w", encoding="utf-8") as f:
+with open("", "w", encoding="utf-8") as f:
     f.write(result)
 
 print("Mixed-content extraction complete!")
