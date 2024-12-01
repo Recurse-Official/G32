@@ -5,12 +5,14 @@ from pdf2text import extract_text_and_images_with_ocr
 
 '''
 
-from pdf2image import convert_from_path
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core.readers.base import BaseReader
+from llama_index.core import Document
 from PyPDF2 import PdfReader
 from PIL import Image
 import pytesseract
 import fitz  # PyMuPDF for image extraction
-
+import io
 def extract_text_and_images_with_ocr(pdf_path):
     # Initialize reader for text and PyMuPDF for images
     pdf_reader = PdfReader(pdf_path)
@@ -40,6 +42,7 @@ def extract_text_and_images_with_ocr(pdf_path):
         combined_content.append(combined_page_content)
 
     # Combine all pages
+    print(combined_content)
     return "\n\n".join(combined_content)
 
 '''
@@ -55,3 +58,18 @@ with open("D:/Srikar/Desktop/NCSTC Booklet.txt", "w", encoding="utf-8") as f:
 
 print("Mixed-content extraction complete!")
 '''
+
+
+class MyFileReader(BaseReader):
+    def load_data(self, file, extra_info=None):
+        # load_data returns a list of Document objects
+        print(file)
+        text = extract_text_and_images_with_ocr(file)
+        return [Document(text=text, extra_info=extra_info or {})]
+
+
+reader = SimpleDirectoryReader(
+    input_dir="./data", file_extractor={".pdf": MyFileReader()}
+)
+
+documents = reader.load_data()
